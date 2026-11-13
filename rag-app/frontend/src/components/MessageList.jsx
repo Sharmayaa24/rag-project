@@ -19,6 +19,7 @@ import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
+import { AgentTraceCard } from "./AgentTrace";
 
 export function SourceCard({ source }) {
   const [open, setOpen] = useState(false);
@@ -103,6 +104,7 @@ export function BotMessage({ m }) {
           <SmartToyRoundedIcon sx={{ fontSize: 19 }} />
         </Avatar>
         <Box sx={{ flex: 1, minWidth: 0, maxWidth: "85%" }}>
+          <AgentTraceCard trace={m.agentTrace} />
           <Paper
             variant="outlined"
             sx={{

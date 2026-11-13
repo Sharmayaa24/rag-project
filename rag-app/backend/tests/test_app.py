@@ -93,3 +93,22 @@ def test_upload_rejects_bad_files():
     assert c.post("/api/documents", files={"file": ("a.txt", b"hi", "text/plain")}).status_code == 400
     assert c.post("/api/documents", files={"file": ("a.pdf", b"not a pdf", "application/pdf")}).status_code == 400
 
+
+def test_a2a_protocol_and_agent_trace():
+    c = TestClient(app)
+    card = c.get("/.well-known/agent.json")
+    assert card.status_code == 200
+    assert card.json()["protocol"] == "A2A/1.0"
+    assert len(card.json()["agents"]) >= 4
+
+    task_res = c.post(
+        "/api/a2a/tasks",
+        json={"id": "t1", "message": {"parts": [{"type": "text", "text": "What is 12 * 5?"}]}},
+    )
+    assert task_res.status_code == 200
+    data = task_res.json()
+    assert data["status"]["state"] == "completed"
+    trace = data["artifacts"][0]["metadata"]["agentTrace"]
+    assert any(step["tool"] == "math_calculator" for step in trace)
+
+

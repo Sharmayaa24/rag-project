@@ -1,16 +1,15 @@
-import uuid
-
 from typing import Optional
+import uuid
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from . import config, providers, store
+from . import a2a, config, providers, store
 from .chunk import create_chunks
 from .extract import extract_pdf
 
-app = FastAPI(title="PDF RAG Chatbot")
+app = FastAPI(title="Qdrant Multi-Agent A2A RAG Chatbot")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -22,11 +21,59 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     question: str
     documentId: Optional[str] = None
+    history: Optional[list[dict]] = None
+    allowWebFallback: bool = True
+
+
+class A2ATaskRequest(BaseModel):
+    id: Optional[str] = None
+    sessionId: Optional[str] = None
+    message: dict
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "provider": config.PROVIDER}
+    return {"status": "ok", "provider": config.PROVIDER, "protocol": "A2A/1.0"}
+
+
+@app.get("/.well-known/agent.json")
+@app.get("/api/a2a/agent-card")
+def agent_card():
+    """Return the official A2A Agent Card for agent discovery."""
+    return a2a.get_agent_card()
+
+
+@app.post("/api/a2a/tasks")
+def a2a_task(req: A2ATaskRequest):
+    """Standard A2A Task execution endpoint."""
+    task_id = req.id or str(uuid.uuid4())
+    parts = req.message.get("parts", [])
+    question = " ".join(p.get("text", "") for p in parts if isinstance(p, dict)).strip()
+    if not question and isinstance(req.message.get("text"), str):
+        question = req.message["text"].strip()
+    if not question:
+        raise HTTPException(400, "A2A task message text is required.")
+
+    try:
+        result = a2a.run_a2a_pipeline(question)
+    except Exception as e:
+        raise HTTPException(502, f"A2A task execution failed: {e}")
+
+    return {
+        "id": task_id,
+        "sessionId": req.sessionId or "default",
+        "status": {"state": "completed"},
+        "artifacts": [
+            {
+                "name": "answer",
+                "parts": [{"type": "text", "text": result["answer"]}],
+                "metadata": {
+                    "sources": result["sources"],
+                    "agentTrace": result["agentTrace"],
+                },
+            }
+        ],
+    }
 
 
 @app.post("/api/documents")
@@ -83,33 +130,11 @@ def chat(req: ChatRequest):
     if not question:
         raise HTTPException(400, "Question is required.")
     try:
-        qvec = providers.embed([question])[0]
-        hits = [h for h in store.search(qvec, req.documentId, config.TOP_K) if h.score >= config.MIN_SCORE]
-        if not hits:
-            return {
-                "answer": "I could not find relevant information in the uploaded documents.",
-                "sources": [],
-            }
-        context = "\n\n".join(
-            f"Source {i + 1} (Document: {h.payload.get('fileName', 'Document')}, Page {h.payload.get('page', 1)}):\n{h.payload['text']}"
-            for i, h in enumerate(hits)
-        )
-        answer = providers.chat(
-            providers.SYSTEM_PROMPT, f"Context:\n{context}\n\nQuestion:\n{question}"
+        return a2a.run_a2a_pipeline(
+            question=question,
+            document_id=req.documentId,
+            history=req.history,
+            allow_web_fallback=req.allowWebFallback,
         )
     except Exception as e:
         raise HTTPException(502, f"Answer generation failed ({config.PROVIDER}): {e}")
-
-    return {
-        "answer": answer or "No answer was generated.",
-        "sources": [
-            {
-                "fileName": h.payload.get("fileName", "Document"),
-                "page": h.payload.get("page", 1),
-                "score": round(h.score, 3),
-                "snippet": h.payload["text"][:300],
-            }
-            for h in hits
-        ],
-    }
-
