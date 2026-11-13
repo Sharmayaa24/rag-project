@@ -13,6 +13,7 @@ import {
   Stack,
   Tooltip,
   Fade,
+  Avatar,
 } from "@mui/material";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
@@ -21,6 +22,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import AutoStoriesRoundedIcon from "@mui/icons-material/AutoStoriesRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
+import Navbar from "../components/Navbar";
 import { uploadDocument, listDocuments, deleteDocument } from "../api";
 
 export default function UploadPage() {
@@ -96,120 +98,41 @@ export default function UploadPage() {
   const totalChunks = docs.reduce((sum, d) => sum + (d.chunks || 0), 0);
 
   return (
-    <Box
-      sx={{
-        width: "100vw",
-        height: "100vh",
-        overflowY: "auto",
-        bgcolor: "#fbfbfe",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Top Navigation */}
-      <Box
-        sx={{
-          bgcolor: "#ffffff",
-          borderBottom: "1px solid #e4e4e7",
-          px: 4,
-          py: 1.75,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <Box display="flex" alignItems="center" gap={1.5}>
-          <Box
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: 2,
-              bgcolor: "#7c3aed",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 2px 6px rgba(124, 58, 237, 0.3)",
-            }}
-          >
-            <AutoStoriesRoundedIcon sx={{ color: "#ffffff", fontSize: 20 }} />
-          </Box>
-          <Box>
-            <Typography fontWeight={800} fontSize={17} letterSpacing={-0.4} color="#18181b">
-              RAG Knowledge Base
-            </Typography>
-            <Typography fontSize={11.5} color="#71717a">
-              Step 1: Upload PDFs into Qdrant Vector DB
-            </Typography>
-          </Box>
-        </Box>
+    <Box sx={{ width: "100vw", height: "100vh", overflowY: "auto", bgcolor: "background.default", display: "flex", flexDirection: "column" }}>
+      <Navbar
+        icon={<AutoStoriesRoundedIcon sx={{ fontSize: 20 }} />}
+        title="RAG Knowledge Base"
+        subtitle="Step 1: Upload PDFs into Qdrant Vector DB"
+        actions={
+          <Button variant="contained" color="primary" startIcon={<ChatRoundedIcon />} onClick={() => navigate("/chat")}>
+            Go to AI Chat ({docs.length} PDFs)
+          </Button>
+        }
+      />
 
-        <Button
-          variant="contained"
-          startIcon={<ChatRoundedIcon />}
-          onClick={() => navigate("/chat")}
-          sx={{
-            bgcolor: "#7c3aed",
-            borderRadius: 2.5,
-            px: 3,
-            py: 1,
-            fontWeight: 700,
-            fontSize: 14,
-            textTransform: "none",
-            boxShadow: "0 2px 8px rgba(124, 58, 237, 0.25)",
-            "&:hover": { bgcolor: "#6d28d9" },
-          }}
-        >
-          Go to AI Chat ({docs.length} PDFs)
-        </Button>
-      </Box>
-
-      {/* Main Container */}
       <Container maxWidth="md" sx={{ flex: 1, py: { xs: 4, md: 6 } }}>
-        {/* Hero Section */}
         <Stack spacing={1.5} alignItems="center" mb={4}>
           <Chip
             icon={<StorageRoundedIcon sx={{ fontSize: 15 }} />}
             label="Qdrant Vector Database Ingestion"
             size="small"
-            sx={{
-              bgcolor: "#ede9fe",
-              color: "#7c3aed",
-              fontWeight: 700,
-              fontSize: 12,
-              "& .MuiChip-icon": { color: "#7c3aed" },
-            }}
+            sx={{ bgcolor: "primary.light", color: "primary.main", "& .MuiChip-icon": { color: "primary.main" } }}
           />
-          <Typography
-            variant="h4"
-            fontWeight={900}
-            textAlign="center"
-            letterSpacing={-0.8}
-            color="#18181b"
-          >
+          <Typography variant="h4" textAlign="center" color="text.primary">
             Add Documents to Your{" "}
-            <Box component="span" sx={{ color: "#7c3aed" }}>
+            <Box component="span" sx={{ color: "primary.main" }}>
               Vector Database
             </Box>
           </Typography>
-          <Typography
-            color="#71717a"
-            textAlign="center"
-            maxWidth={540}
-            fontSize={15}
-            lineHeight={1.6}
-          >
+          <Typography color="text.secondary" textAlign="center" maxWidth={540} fontSize={15} lineHeight={1.6}>
             Upload as many PDFs as you need. Each PDF is split into chunks, converted into
             768-dimensional vectors, and stored in Qdrant so you can ask questions across all
             of them together.
           </Typography>
         </Stack>
 
-        {/* Upload Card / Dropzone */}
         <Paper
-          elevation={0}
+          variant="outlined"
           onDragOver={(e) => {
             e.preventDefault();
             setDragging(true);
@@ -219,17 +142,14 @@ export default function UploadPage() {
           onClick={() => !uploading && document.getElementById("file-input").click()}
           sx={{
             border: "2px dashed",
-            borderColor: dragging ? "#7c3aed" : "#d4d4d8",
+            borderColor: dragging ? "primary.main" : "divider",
             borderRadius: 4,
             p: { xs: 4, md: 5 },
             textAlign: "center",
-            bgcolor: dragging ? "#faf5ff" : "#ffffff",
+            bgcolor: dragging ? "primary.light" : "background.paper",
             transition: "all 0.2s ease",
             cursor: uploading ? "default" : "pointer",
-            "&:hover": {
-              borderColor: "#7c3aed",
-              bgcolor: "#faf5ff",
-            },
+            "&:hover": { borderColor: "primary.main", bgcolor: "primary.light" },
           }}
         >
           <input
@@ -240,28 +160,15 @@ export default function UploadPage() {
             onChange={(e) => processFile(e.target.files[0])}
           />
 
-          <Box
-            sx={{
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              bgcolor: "#ede9fe",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mx: "auto",
-              mb: 2,
-              color: "#7c3aed",
-            }}
-          >
+          <Avatar sx={{ width: 64, height: 64, bgcolor: "primary.light", color: "primary.main", mx: "auto", mb: 2 }}>
             <CloudUploadRoundedIcon sx={{ fontSize: 34 }} />
-          </Box>
+          </Avatar>
 
-          <Typography fontWeight={700} fontSize={18} color="#18181b" mb={0.75}>
+          <Typography variant="h6" color="text.primary" mb={0.75}>
             {dragging ? "Release to embed PDF into Qdrant" : "Drop a PDF here to index into Qdrant"}
           </Typography>
 
-          <Typography color="#71717a" fontSize={13.5} mb={2.5}>
+          <Typography color="text.secondary" fontSize={13.5} mb={2.5}>
             PDF text is extracted page-by-page, embedded, and saved as vectors • Max 10 MB
           </Typography>
 
@@ -270,16 +177,6 @@ export default function UploadPage() {
             size="large"
             disabled={uploading}
             startIcon={<CloudUploadRoundedIcon />}
-            sx={{
-              bgcolor: "#7c3aed",
-              borderRadius: 2.5,
-              px: 3.5,
-              py: 1.1,
-              fontSize: 14.5,
-              fontWeight: 700,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#6d28d9" },
-            }}
             onClick={(e) => {
               e.stopPropagation();
               document.getElementById("file-input").click();
@@ -289,45 +186,21 @@ export default function UploadPage() {
           </Button>
         </Paper>
 
-        {/* Upload progress */}
         {uploading && (
           <Box mt={2.5}>
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{
-                height: 8,
-                borderRadius: 4,
-                bgcolor: "#ede9fe",
-                "& .MuiLinearProgress-bar": {
-                  bgcolor: "#7c3aed",
-                  borderRadius: 4,
-                },
-              }}
-            />
-            <Typography
-              variant="caption"
-              color="#71717a"
-              display="block"
-              textAlign="center"
-              mt={1}
-            >
+            <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4 }} />
+            <Typography variant="caption" color="text.secondary" display="block" textAlign="center" mt={1}>
               Extracting pages • Generating 768-dim vectors • Upserting Points into Qdrant…
             </Typography>
           </Box>
         )}
 
-        {/* Alerts / Status */}
         {status && (
           <Fade in>
             <Alert
               severity={status.type}
               onClose={() => setStatus(null)}
-              icon={
-                status.type === "success" ? (
-                  <CheckCircleRoundedIcon fontSize="inherit" />
-                ) : undefined
-              }
+              icon={status.type === "success" ? <CheckCircleRoundedIcon fontSize="inherit" /> : undefined}
               sx={{ mt: 2.5, borderRadius: 3 }}
             >
               {status.msg}
@@ -335,17 +208,16 @@ export default function UploadPage() {
           </Fade>
         )}
 
-        {/* Indexed Vector Database Summary */}
         {docs.length > 0 && (
           <Box mt={5}>
             <Paper
-              elevation={0}
+              variant="outlined"
               sx={{
                 p: 2.5,
                 mb: 2.5,
                 borderRadius: 3,
-                bgcolor: "#f5f3ff",
-                border: "1px solid #ddd6fe",
+                bgcolor: "primary.light",
+                borderColor: "primary.main",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -354,42 +226,21 @@ export default function UploadPage() {
               }}
             >
               <Box>
-                <Typography fontWeight={800} fontSize={16} color="#18181b">
+                <Typography variant="subtitle1" fontWeight={800} color="text.primary">
                   Ready to Chat Across All {docs.length} Indexed PDFs
                 </Typography>
-                <Typography fontSize={13} color="#52525b">
+                <Typography variant="body2" color="text.secondary">
                   Qdrant currently holds <strong>{totalChunks} vector chunks</strong> from{" "}
-                  <strong>{totalPages} total pages</strong>. No need to select a file—ask any
-                  question and all documents are searched automatically.
+                  <strong>{totalPages} total pages</strong>. Ask any question and all documents
+                  are searched automatically.
                 </Typography>
               </Box>
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<ChatRoundedIcon />}
-                onClick={() => navigate("/chat")}
-                sx={{
-                  bgcolor: "#7c3aed",
-                  borderRadius: 2.5,
-                  px: 3,
-                  py: 1.1,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  "&:hover": { bgcolor: "#6d28d9" },
-                }}
-              >
+              <Button variant="contained" size="large" startIcon={<ChatRoundedIcon />} onClick={() => navigate("/chat")}>
                 Open AI Chat →
               </Button>
             </Paper>
 
-            <Typography
-              fontSize={12}
-              fontWeight={700}
-              color="#71717a"
-              textTransform="uppercase"
-              letterSpacing={0.6}
-              mb={1.5}
-            >
+            <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" display="block" mb={1.5}>
               Sources Stored in Qdrant ({docs.length})
             </Typography>
 
@@ -397,50 +248,25 @@ export default function UploadPage() {
               {docs.map((doc) => (
                 <Paper
                   key={doc.documentId}
-                  elevation={0}
-                  sx={{
-                    border: "1px solid #e4e4e7",
-                    borderRadius: 2.5,
-                    px: 2,
-                    py: 1.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.75,
-                    bgcolor: "#ffffff",
-                  }}
+                  variant="outlined"
+                  sx={{ borderRadius: 2.5, px: 2, py: 1.5, display: "flex", alignItems: "center", gap: 1.75 }}
                 >
-                  <DescriptionOutlinedIcon sx={{ color: "#7c3aed", fontSize: 22 }} />
-
+                  <DescriptionOutlinedIcon color="primary" sx={{ fontSize: 22 }} />
                   <Box flex={1} minWidth={0}>
-                    <Typography fontWeight={600} fontSize={14} color="#18181b" noWrap>
+                    <Typography fontWeight={600} fontSize={14} color="text.primary" noWrap>
                       {doc.fileName}
                     </Typography>
-                    <Typography fontSize={12} color="#71717a">
+                    <Typography variant="caption" color="text.secondary">
                       {doc.pages} pages • {doc.chunks} vectors stored in Qdrant
                     </Typography>
                   </Box>
-
                   <Chip
                     label="Indexed in Qdrant"
                     size="small"
-                    sx={{
-                      bgcolor: "#dcfce7",
-                      color: "#15803d",
-                      fontWeight: 700,
-                      fontSize: 11,
-                      height: 22,
-                    }}
+                    sx={{ bgcolor: "secondary.light", color: "secondary.dark", fontSize: 11, height: 22 }}
                   />
-
                   <Tooltip title="Remove this document's vectors from Qdrant">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleDelete(doc.documentId, e)}
-                      sx={{
-                        color: "#a1a1aa",
-                        "&:hover": { color: "#ef4444" },
-                      }}
-                    >
+                    <IconButton size="small" color="error" onClick={(e) => handleDelete(doc.documentId, e)}>
                       <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </Tooltip>
