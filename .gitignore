@@ -1,0 +1,14 @@
+.env
+**/backend/.env
+.venv/
+**/.venv/
+.pytest_cache/
+**/__pycache__/
+*.pyc
+qdrant_data/
+**/qdrant_data/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
