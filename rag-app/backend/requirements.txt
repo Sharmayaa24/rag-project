@@ -2,9 +2,10 @@ fastapi
 uvicorn[standard]
 python-multipart
 pypdf
+pymupdf
+rapidocr-onnxruntime
 qdrant-client
 python-dotenv
 httpx
 google-genai
 pytest
-

@@ -1,13 +1,20 @@
 from typing import Optional
+from urllib.parse import urlparse
 import uuid
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+import httpx
 from pydantic import BaseModel
 
 from . import a2a, config, providers, store
 from .chunk import create_chunks
-from .extract import extract_pdf
+from .extract import (
+    SUPPORTED_EXTENSIONS,
+    extract_document,
+    extract_html_text,
+    split_text_into_pages,
+)
 
 app = FastAPI(title="Qdrant Multi-Agent A2A RAG Chatbot")
 app.add_middleware(
@@ -25,10 +32,43 @@ class ChatRequest(BaseModel):
     allowWebFallback: bool = True
 
 
+class TextUploadRequest(BaseModel):
+    title: str
+    content: str
+
+
+class UrlUploadRequest(BaseModel):
+    url: str
+
+
 class A2ATaskRequest(BaseModel):
     id: Optional[str] = None
     sessionId: Optional[str] = None
     message: dict
+
+
+def _index_pages(name: str, pages: list[tuple[int, str]]) -> dict:
+    if not any(t.strip() for _, t in pages):
+        raise HTTPException(422, "No readable text or OCR content could be extracted.")
+
+    chunks = create_chunks(pages, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
+    document_id = str(uuid.uuid4())
+    try:
+        batch_size = 64
+        for i in range(0, len(chunks), batch_size):
+            batch = chunks[i : i + batch_size]
+            vectors = providers.embed([c["text"][:3000] for c in batch])
+            store.add_chunks(document_id, name, batch, vectors)
+    except Exception as e:
+        store.delete_document(document_id)
+        raise HTTPException(502, f"Embedding/indexing failed ({config.PROVIDER}): {e}")
+
+    return {
+        "documentId": document_id,
+        "fileName": name,
+        "pages": len(pages),
+        "chunks": len(chunks),
+    }
 
 
 @app.get("/api/health")
@@ -77,40 +117,64 @@ def a2a_task(req: A2ATaskRequest):
 
 
 @app.post("/api/documents")
-async def upload(file: UploadFile = File(...)):
+def upload(file: UploadFile = File(...)):
     name = file.filename or "document.pdf"
-    if not name.lower().endswith(".pdf"):
-        raise HTTPException(400, "Only PDF files are allowed.")
-    data = await file.read(config.MAX_UPLOAD_BYTES + 1)
-    if len(data) > config.MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "File is larger than 10 MB.")
-    if not data.startswith(b"%PDF"):
-        raise HTTPException(400, "File is not a valid PDF.")
+    ext = "." + name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    if ext not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            400,
+            f"Unsupported file type '{ext}'. Allowed: {', '.join(SUPPORTED_EXTENSIONS)}",
+        )
 
+    data = file.file.read()
     try:
-        pages = extract_pdf(data)
+        pages = extract_document(data, name)
+    except ValueError as ve:
+        raise HTTPException(400, str(ve))
     except Exception:
-        raise HTTPException(400, "Could not read this PDF.")
-    if not any(t.strip() for _, t in pages):
-        raise HTTPException(422, "No selectable text found. This may be a scanned PDF; OCR is required.")
+        raise HTTPException(400, f"Could not read '{name}'.")
 
-    chunks = create_chunks(pages, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
-    document_id = str(uuid.uuid4())
+    return _index_pages(name, pages)
+
+
+@app.post("/api/documents/text")
+def upload_text(req: TextUploadRequest):
+    title = req.title.strip() or "Note.txt"
+    if "." not in title:
+        title = f"{title}.txt"
+    content = req.content.strip()
+    if not content:
+        raise HTTPException(400, "Text content cannot be empty.")
+
+    pages = split_text_into_pages(content)
+    return _index_pages(title, pages)
+
+
+@app.post("/api/documents/url")
+def upload_url(req: UrlUploadRequest):
+    url = req.url.strip()
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise HTTPException(400, "Please enter a valid http:// or https:// URL.")
+
     try:
-        for i in range(0, len(chunks), 16):
-            batch = chunks[i : i + 16]
-            vectors = providers.embed([c["text"] for c in batch])
-            store.add_chunks(document_id, name, batch, vectors)
+        resp = httpx.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (DocumentWorkspaceBot/1.0)"},
+            follow_redirects=True,
+            timeout=20,
+        )
+        resp.raise_for_status()
     except Exception as e:
-        store.delete_document(document_id)
-        raise HTTPException(502, f"Embedding/indexing failed ({config.PROVIDER}): {e}")
+        raise HTTPException(400, f"Could not fetch URL: {e}")
 
-    return {
-        "documentId": document_id,
-        "fileName": name,
-        "pages": len(pages),
-        "chunks": len(chunks),
-    }
+    text = extract_html_text(resp.text)
+    if not text.strip():
+        raise HTTPException(422, "No readable text found at that URL.")
+
+    label = f"{parsed.netloc}{parsed.path}".rstrip("/") or parsed.netloc
+    pages = split_text_into_pages(text)
+    return _index_pages(label, pages)
 
 
 @app.get("/api/documents")

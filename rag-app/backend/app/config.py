@@ -27,5 +27,4 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "600"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))
 TOP_K = int(os.getenv("TOP_K", "3"))
 MIN_SCORE = float(os.getenv("MIN_SCORE", "0.2"))
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 

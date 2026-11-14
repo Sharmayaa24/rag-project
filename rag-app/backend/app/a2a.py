@@ -146,14 +146,20 @@ def run_a2a_pipeline(
             }
         )
 
-    # 3. Qdrant RAG Specialist Agent
+    # 3. Qdrant RAG Specialist Agent (with conversational context expansion for follow-ups)
     t_rag = time.perf_counter()
-    hits = tools.qdrant_search_tool(question, document_id, config.TOP_K)
+    search_query = question
+    if history and len(question.split()) <= 8:
+        prev_user_msgs = [m.get("text", "") for m in history if m.get("role") == "user" and m.get("text")]
+        if prev_user_msgs:
+            search_query = f"{prev_user_msgs[-1]} {question}"
+
+    hits = tools.qdrant_search_tool(search_query, document_id, config.TOP_K)
 
     # Corrective RAG: If no hits or very weak top score, rewrite query to core keywords and retry
     if not hits and not document_id:
-        rewritten = _extract_keywords(question)
-        if rewritten and rewritten.lower() != question.lower():
+        rewritten = _extract_keywords(search_query)
+        if rewritten and rewritten.lower() != search_query.lower():
             hits = tools.qdrant_search_tool(rewritten, document_id, config.TOP_K)
             if hits:
                 trace.append(

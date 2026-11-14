@@ -14,6 +14,20 @@ export const uploadDocument = (file) => {
   return fetch("/api/documents", { method: "POST", body: form }).then(json);
 };
 
+export const uploadTextDocument = (title, content) =>
+  fetch("/api/documents/text", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, content }),
+  }).then(json);
+
+export const uploadUrlDocument = (url) =>
+  fetch("/api/documents/url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  }).then(json);
+
 export const deleteDocument = (id) =>
   fetch(`/api/documents/${id}`, { method: "DELETE" }).then(json);
 

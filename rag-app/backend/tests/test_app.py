@@ -90,8 +90,9 @@ def test_upload_chat_delete_flow():
 
 def test_upload_rejects_bad_files():
     c = TestClient(app)
-    assert c.post("/api/documents", files={"file": ("a.txt", b"hi", "text/plain")}).status_code == 400
+    assert c.post("/api/documents", files={"file": ("a.exe", b"hi", "application/octet-stream")}).status_code == 400
     assert c.post("/api/documents", files={"file": ("a.pdf", b"not a pdf", "application/pdf")}).status_code == 400
+    assert c.post("/api/documents/text", json={"title": "Notes", "content": "Important project note"}).status_code == 200
 
 
 def test_a2a_protocol_and_agent_trace():
