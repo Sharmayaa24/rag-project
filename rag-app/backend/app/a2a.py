@@ -219,7 +219,7 @@ def run_a2a_pipeline(
 
     # 5. Assemble multi-agent context + conversation history
     context_parts = [
-        f"Source {i + 1} (Document: {h['fileName']}, Page {h['page']}):\n{h['text']}"
+        f"Source {i + 1} (Document: {h['fileName']}, Page {h['page']}):\n{h['text'][:1200]}"
         for i, h in enumerate(hits)
     ]
     context_parts.extend(extra_context_blocks)

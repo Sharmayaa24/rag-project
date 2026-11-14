@@ -5,12 +5,13 @@ export default function EmptyState({ icon, title, description, children }) {
     <Box sx={{ my: "auto", textAlign: "center", py: 5, px: 2 }}>
       <Avatar
         sx={{
-          width: 64,
-          height: 64,
-          bgcolor: "primary.light",
-          color: "primary.main",
+          width: 60,
+          height: 60,
+          borderRadius: "18px",
+          bgcolor: "#E8F2FF",
+          color: "#0071E3",
           mx: "auto",
-          mb: 2.5,
+          mb: 2.25,
         }}
       >
         {icon}
@@ -21,7 +22,7 @@ export default function EmptyState({ icon, title, description, children }) {
       <Typography
         variant="body1"
         color="text.secondary"
-        maxWidth={540}
+        maxWidth={480}
         mx="auto"
         mb={children ? 3.5 : 0}
         lineHeight={1.6}
@@ -32,4 +33,3 @@ export default function EmptyState({ icon, title, description, children }) {
     </Box>
   );
 }
-

@@ -23,9 +23,9 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "").strip()
 QDRANT_PATH = os.getenv("QDRANT_PATH", str(BASE_DIR / "qdrant_data"))
 COLLECTION = f"pdf_{PROVIDER}"
 
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "120"))
-TOP_K = int(os.getenv("TOP_K", "4"))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "600"))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))
+TOP_K = int(os.getenv("TOP_K", "3"))
 MIN_SCORE = float(os.getenv("MIN_SCORE", "0.2"))
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
