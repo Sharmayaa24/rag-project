@@ -8,6 +8,15 @@ export const listDocuments = () => fetch("/api/documents").then(json);
 
 export const getAgentCard = () => fetch("/api/a2a/agent-card").then(json);
 
+export const getSettings = () => fetch("/api/settings").then(json);
+
+export const updateSettings = (payload) =>
+  fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(json);
+
 export const uploadDocument = (file) => {
   const form = new FormData();
   form.append("file", file);

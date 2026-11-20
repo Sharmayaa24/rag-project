@@ -41,6 +41,18 @@ class UrlUploadRequest(BaseModel):
     url: str
 
 
+class SettingsUpdateRequest(BaseModel):
+    chatProvider: Optional[str] = None
+    ollamaModel: Optional[str] = None
+    freebuffModel: Optional[str] = None
+    geminiApiKey: Optional[str] = None
+    geminiModel: Optional[str] = None
+    groqApiKey: Optional[str] = None
+    groqModel: Optional[str] = None
+    openrouterApiKey: Optional[str] = None
+    openrouterModel: Optional[str] = None
+
+
 class A2ATaskRequest(BaseModel):
     id: Optional[str] = None
     sessionId: Optional[str] = None
@@ -61,7 +73,7 @@ def _index_pages(name: str, pages: list[tuple[int, str]]) -> dict:
             store.add_chunks(document_id, name, batch, vectors)
     except Exception as e:
         store.delete_document(document_id)
-        raise HTTPException(502, f"Embedding/indexing failed ({config.PROVIDER}): {e}")
+        raise HTTPException(502, providers.describe_error(e, "Embedding/indexing"))
 
     return {
         "documentId": document_id,
@@ -73,7 +85,54 @@ def _index_pages(name: str, pages: list[tuple[int, str]]) -> dict:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "provider": config.PROVIDER, "protocol": "A2A/1.0"}
+    return {
+        "status": "ok",
+        "provider": config.RUNTIME_SETTINGS.get("chatProvider") or config.PROVIDER,
+        "protocol": "A2A/1.0",
+    }
+
+
+def _public_settings() -> dict:
+    s = config.RUNTIME_SETTINGS
+    return {
+        "chatProvider": s.get("chatProvider") or "ollama",
+        "ollamaModel": s.get("ollamaModel") or "qwen2.5:3b",
+        "freebuffModel": s.get("freebuffModel") or "openai",
+        "geminiModel": s.get("geminiModel") or "gemini-3.8-flash",
+        "groqModel": s.get("groqModel") or "llama-3.3-70b-versatile",
+        "openrouterModel": s.get("openrouterModel") or "meta-llama/llama-3.3-70b-instruct:free",
+        "hasGeminiKey": bool((s.get("geminiApiKey") or "").strip()),
+        "hasGroqKey": bool((s.get("groqApiKey") or "").strip()),
+        "hasOpenrouterKey": bool((s.get("openrouterApiKey") or "").strip()),
+    }
+
+
+@app.get("/api/settings")
+def get_settings():
+    return _public_settings()
+
+
+@app.post("/api/settings")
+def update_settings(req: SettingsUpdateRequest):
+    allowed_providers = {"ollama", "freebuff", "gemini", "groq", "openrouter"}
+    if req.chatProvider:
+        p = req.chatProvider.strip().lower()
+        if p not in allowed_providers:
+            raise HTTPException(400, f"Invalid provider '{p}'.")
+        config.RUNTIME_SETTINGS["chatProvider"] = p
+
+    for field in ("ollamaModel", "freebuffModel", "geminiModel", "groqModel", "openrouterModel"):
+        val = getattr(req, field)
+        if val is not None and val.strip():
+            config.RUNTIME_SETTINGS[field] = val.strip()
+
+    for key_field in ("geminiApiKey", "groqApiKey", "openrouterApiKey"):
+        val = getattr(req, key_field)
+        if val is not None and val.strip():
+            config.RUNTIME_SETTINGS[key_field] = val.strip()
+
+    config.save_runtime_settings()
+    return _public_settings()
 
 
 @app.get("/.well-known/agent.json")
@@ -201,4 +260,4 @@ def chat(req: ChatRequest):
             allow_web_fallback=req.allowWebFallback,
         )
     except Exception as e:
-        raise HTTPException(502, f"Answer generation failed ({config.PROVIDER}): {e}")
+        raise HTTPException(502, providers.describe_error(e, "Answer generation"))
