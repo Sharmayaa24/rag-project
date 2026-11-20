@@ -113,3 +113,44 @@ def test_a2a_protocol_and_agent_trace():
     assert any(step["tool"] == "math_calculator" for step in trace)
 
 
+def test_python_and_postgres_tools_safety():
+    from app import tools
+
+    ok = tools.python_executor_tool("result = sum([2, 4, 6])")
+    assert ok["result"] == "12"
+
+    blocked_py = tools.python_executor_tool("import os\nresult = os.listdir('.')")
+    assert "error" in blocked_py
+
+    blocked_sql = tools.postgres_query_tool("DELETE FROM users")
+    assert "error" in blocked_sql
+
+
+def test_agentic_rag_grading_and_self_correction(monkeypatch):
+    from app import a2a
+
+    # Mock chat_json to route to pdf, keep chunk 0, and trigger 1 self-correction
+    calls = {"grade": 0, "correct": 0}
+
+    def fake_chat_json(system, user):
+        if "router" in system.lower():
+            return {"route": "pdf", "rewritten_query": "casual leaves policy", "thought": "Check PDF"}
+        if "relevance grader" in system.lower():
+            calls["grade"] += 1
+            return {"relevant_indices": [0]}
+        if "hallucination" in system.lower():
+            calls["correct"] += 1
+            return {"supported": False, "issue": "Added unsupported bonus detail"} if calls["correct"] == 1 else {"supported": True, "issue": ""}
+        return {}
+
+    monkeypatch.setattr(providers, "chat_json", fake_chat_json)
+    monkeypatch.setattr(a2a.tools, "qdrant_search_tool", lambda q, d, k: [
+        {"fileName": "hb.pdf", "page": 2, "score": 0.88, "text": "Twelve casual leaves per year", "snippet": "Twelve casual leaves"}
+    ])
+
+    res = a2a.run_a2a_pipeline("How many leaves?")
+    assert len(res["sources"]) == 1
+    assert calls["grade"] == 1
+    assert any(step["tool"] == "self_correction" for step in res["agentTrace"])
+
+

@@ -10,12 +10,14 @@ import {
   Paper,
   Button,
   Grid,
+  Chip,
 } from "@mui/material";
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import AddCommentRoundedIcon from "@mui/icons-material/AddCommentRounded";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
 import Navbar from "../components/Navbar";
 import EmptyState from "../components/EmptyState";
 import { UserMessage, BotMessage, ThinkingIndicator } from "../components/MessageList";
@@ -34,6 +36,7 @@ export default function ChatPage() {
   const [docs, setDocs] = useState([]);
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
+  const [webSearch, setWebSearch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState("");
@@ -73,12 +76,13 @@ export default function ChatPage() {
       setBusy(true);
 
       try {
-        const response = await ask(q, null, []);
+        const response = await ask(q, null, [], webSearch);
         setMessages((prev) => [
           ...prev,
           {
             role: "bot",
             text: response.answer,
+            sources: response.sources,
             isNew: true,
           },
         ]);
@@ -89,7 +93,7 @@ export default function ChatPage() {
         inputRef.current?.focus();
       }
     },
-    [question, busy]
+    [question, busy, webSearch]
   );
 
   const handleKeyDown = (e) => {
@@ -258,7 +262,7 @@ export default function ChatPage() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Message…"
+              placeholder={webSearch ? "Ask anything (Web Search + Documents)…" : "Message…"}
               disabled={busy}
               variant="standard"
               InputProps={{
@@ -266,6 +270,28 @@ export default function ChatPage() {
                 sx: { fontSize: 15.5, lineHeight: 1.5, py: 0.4, color: "#1D1D1F" },
               }}
             />
+            <Tooltip title={webSearch ? "Web Search enabled for every message" : "Enable live Web Search"}>
+              <Chip
+                icon={<LanguageRoundedIcon sx={{ fontSize: 15 }} />}
+                label="Web"
+                size="small"
+                onClick={() => setWebSearch((w) => !w)}
+                sx={{
+                  height: 32,
+                  px: 0.5,
+                  mb: 0.1,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  bgcolor: webSearch ? "#E8F2FF" : "#F5F5F7",
+                  color: webSearch ? "#0071E3" : "#86868B",
+                  border: "1px solid",
+                  borderColor: webSearch ? "rgba(0, 113, 227, 0.35)" : "transparent",
+                  "& .MuiChip-icon": { color: webSearch ? "#0071E3" : "#86868B" },
+                  "&:hover": { bgcolor: webSearch ? "#DCEBFF" : "#EBEBF0" },
+                }}
+              />
+            </Tooltip>
             <Tooltip title="Send">
               <span>
                 <IconButton

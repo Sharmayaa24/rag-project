@@ -12,7 +12,11 @@ def client() -> QdrantClient:
     global _client
     if _client is None:
         if config.QDRANT_URL:
-            _client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY or None)
+            _client = QdrantClient(
+                url=config.QDRANT_URL,
+                api_key=config.QDRANT_API_KEY or None,
+                timeout=60,
+            )
         else:
             _client = QdrantClient(path=config.QDRANT_PATH)
     return _client
@@ -57,8 +61,8 @@ def add_chunks(document_id, file_name, chunks, vectors):
         )
         for ch, vec in zip(chunks, vectors)
     ]
-    for i in range(0, len(points), 64):
-        client().upsert(config.COLLECTION, points=points[i : i + 64])
+    for i in range(0, len(points), 20):
+        client().upsert(config.COLLECTION, points=points[i : i + 20])
 
 
 def search(vector, document_id, top_k):

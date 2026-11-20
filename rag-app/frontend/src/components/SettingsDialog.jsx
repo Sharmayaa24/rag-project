@@ -43,14 +43,14 @@ export const PROVIDERS_INFO = [
     badgeBg: "#E8F2FF",
     accent: "#0071E3",
     icon: <AutoAwesomeRoundedIcon sx={{ fontSize: 19 }} />,
-    description: "Uses Google Gemini 3.8 Flash for fast, structured answers.",
+    description: "Uses Google Gemini 3.5 Flash Lite (~1s) for fast, structured answers.",
     needsKey: true,
     keyField: "geminiApiKey",
     keyLabel: "Gemini API Key",
     keyPlaceholder: "AIzaSy...",
     hasKeyFlag: "hasGeminiKey",
     modelField: "geminiModel",
-    defaultModel: "gemini-3.8-flash",
+    defaultModel: "gemini-3.5-flash-lite",
   },
   {
     id: "groq",
@@ -108,10 +108,11 @@ export default function SettingsDialog({ open, onClose, onUpdated }) {
     geminiApiKey: "",
     groqApiKey: "",
     openrouterApiKey: "",
+    postgresDsn: "",
   });
   const [models, setModels] = useState({
     ollamaModel: "qwen2.5:3b",
-    geminiModel: "gemini-3.8-flash",
+    geminiModel: "gemini-3.5-flash-lite",
     groqModel: "llama-3.3-70b-versatile",
     openrouterModel: "meta-llama/llama-3.3-70b-instruct:free",
   });
@@ -127,7 +128,7 @@ export default function SettingsDialog({ open, onClose, onUpdated }) {
         setSelectedProvider(data.chatProvider || "ollama");
         setModels({
           ollamaModel: data.ollamaModel || "qwen2.5:3b",
-          geminiModel: data.geminiModel || "gemini-3.8-flash",
+          geminiModel: data.geminiModel || "gemini-3.5-flash-lite",
           groqModel: data.groqModel || "llama-3.3-70b-versatile",
           openrouterModel: data.openrouterModel || "meta-llama/llama-3.3-70b-instruct:free",
         });
@@ -328,6 +329,44 @@ export default function SettingsDialog({ open, onClose, onUpdated }) {
             );
           })}
         </Stack>
+
+        <Paper
+          variant="outlined"
+          sx={{
+            mt: 2,
+            p: 1.75,
+            borderRadius: "16px",
+            borderColor: "rgba(0, 0, 0, 0.08)",
+            bgcolor: "#F5F5F7",
+          }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+            <Typography variant="subtitle2" fontWeight={700} color="#1D1D1F">
+              PostgreSQL Database Tool (Optional)
+            </Typography>
+            {serverState.hasPostgresDsn && (
+              <Chip
+                label="DSN Saved"
+                size="small"
+                sx={{ height: 20, fontSize: 10, bgcolor: "#EAF9EE", color: "#248A3D" }}
+              />
+            )}
+          </Stack>
+          <TextField
+            label={
+              serverState.hasPostgresDsn
+                ? "PostgreSQL URL (Saved — enter to replace)"
+                : "PostgreSQL Connection URL"
+            }
+            placeholder="postgresql://postgres:12345678@localhost:5432/postgres"
+            type="password"
+            size="small"
+            fullWidth
+            value={keys.postgresDsn || ""}
+            onChange={(e) => setKeys((prev) => ({ ...prev, postgresDsn: e.target.value }))}
+            sx={{ bgcolor: "#FFFFFF", borderRadius: 2 }}
+          />
+        </Paper>
 
         {error && (
           <Alert severity="error" sx={{ mt: 2, borderRadius: "12px" }}>

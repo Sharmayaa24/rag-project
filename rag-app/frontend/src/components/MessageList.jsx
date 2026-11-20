@@ -282,6 +282,7 @@ export function UserMessage({ text }) {
 
 export function BotMessage({ m }) {
   const [copied, setCopied] = useState(false);
+  const [activeCite, setActiveCite] = useState(null);
   const fullText = m.text || "";
   const shouldStream = Boolean(m.isNew);
   const [displayedText, setDisplayedText] = useState(shouldStream ? "" : fullText);
@@ -366,7 +367,7 @@ export function BotMessage({ m }) {
           <FormattedBotContent text={displayedText} isStreaming={isStreaming} />
         </Paper>
 
-        <Box display="flex" alignItems="center" mt={0.4} ml={0.5}>
+        <Box display="flex" alignItems="center" flexWrap="wrap" gap={0.75} mt={0.6} ml={0.5}>
           <Tooltip title={copied ? "Copied" : "Copy"}>
             <IconButton
               size="small"
@@ -376,7 +377,62 @@ export function BotMessage({ m }) {
               {copied ? <CheckRoundedIcon sx={{ fontSize: 14 }} /> : <ContentCopyRoundedIcon sx={{ fontSize: 14 }} />}
             </IconButton>
           </Tooltip>
+          {!isStreaming &&
+            m.sources?.map((s, idx) => (
+              <Chip
+                key={idx}
+                label={`${s.fileName} • p.${s.page}`}
+                size="small"
+                onClick={() => setActiveCite((cur) => (cur === idx ? null : idx))}
+                sx={{
+                  height: 22,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  bgcolor: activeCite === idx ? "#0071E3" : "#F5F5F7",
+                  color: activeCite === idx ? "#FFFFFF" : "#1D1D1F",
+                  border: "1px solid rgba(0, 0, 0, 0.08)",
+                  "&:hover": { bgcolor: activeCite === idx ? "#0077ED" : "#E8F2FF" },
+                }}
+              />
+            ))}
         </Box>
+
+        {!isStreaming && activeCite !== null && m.sources?.[activeCite] && (
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: 1,
+              p: 1.5,
+              borderRadius: "12px",
+              bgcolor: "#F5F5F7",
+              borderColor: "rgba(0, 113, 227, 0.25)",
+            }}
+          >
+            <Typography variant="caption" color="#1D1D1F" sx={{ display: "block", lineHeight: 1.55 }}>
+              "{m.sources[activeCite].snippet}…"
+            </Typography>
+            {m.sources[activeCite].url && (
+              <Typography
+                component="a"
+                href={m.sources[activeCite].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="caption"
+                sx={{
+                  display: "inline-block",
+                  mt: 0.75,
+                  color: "#0071E3",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  "&:hover": { textDecoration: "underline" },
+                }}
+              >
+                Open Web Source ↗
+              </Typography>
+            )}
+          </Paper>
+        )}
       </Box>
     </Box>
   );

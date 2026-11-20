@@ -19,11 +19,12 @@ OLLAMA_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 OLLAMA_CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL", "qwen2.5:3b")
 
 GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
-GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-3.8-flash")
+GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-3.5-flash-lite")
 
 GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
 OPENROUTER_CHAT_MODEL = os.getenv("OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
 FREEBUFF_CHAT_MODEL = os.getenv("FREEBUFF_CHAT_MODEL", "openai")
+POSTGRES_DSN = os.getenv("POSTGRES_DSN", os.getenv("DATABASE_URL", "")).strip()
 
 # Mutable runtime settings controlled from the UI Settings dialog
 RUNTIME_SETTINGS = {
@@ -36,6 +37,7 @@ RUNTIME_SETTINGS = {
     "groqModel": GROQ_CHAT_MODEL,
     "openrouterApiKey": OPENROUTER_API_KEY,
     "openrouterModel": OPENROUTER_CHAT_MODEL,
+    "postgresDsn": POSTGRES_DSN,
 }
 
 # UI Settings (provider choice + API keys) are persisted here so they survive restarts.
@@ -67,3 +69,5 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "600"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))
 TOP_K = int(os.getenv("TOP_K", "3"))
 MIN_SCORE = float(os.getenv("MIN_SCORE", "0.2"))
+MAX_REACT_STEPS = int(os.getenv("MAX_REACT_STEPS", "4"))
+ENABLE_SELF_CORRECTION = os.getenv("ENABLE_SELF_CORRECTION", "true").lower() == "true"

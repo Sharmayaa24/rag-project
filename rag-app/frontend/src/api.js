@@ -40,7 +40,7 @@ export const uploadUrlDocument = (url) =>
 export const deleteDocument = (id) =>
   fetch(`/api/documents/${id}`, { method: "DELETE" }).then(json);
 
-export const ask = (question, documentId = null, history = []) =>
+export const ask = (question, documentId = null, history = [], forceWebSearch = false) =>
   fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -48,5 +48,6 @@ export const ask = (question, documentId = null, history = []) =>
       question,
       documentId: documentId && documentId !== "all" ? documentId : null,
       history,
+      forceWebSearch,
     }),
   }).then(json);

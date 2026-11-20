@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
     documentId: Optional[str] = None
     history: Optional[list[dict]] = None
     allowWebFallback: bool = True
+    forceWebSearch: bool = False
 
 
 class TextUploadRequest(BaseModel):
@@ -51,6 +52,7 @@ class SettingsUpdateRequest(BaseModel):
     groqModel: Optional[str] = None
     openrouterApiKey: Optional[str] = None
     openrouterModel: Optional[str] = None
+    postgresDsn: Optional[str] = None
 
 
 class A2ATaskRequest(BaseModel):
@@ -98,12 +100,13 @@ def _public_settings() -> dict:
         "chatProvider": s.get("chatProvider") or "ollama",
         "ollamaModel": s.get("ollamaModel") or "qwen2.5:3b",
         "freebuffModel": s.get("freebuffModel") or "openai",
-        "geminiModel": s.get("geminiModel") or "gemini-3.8-flash",
+        "geminiModel": s.get("geminiModel") or "gemini-3.5-flash-lite",
         "groqModel": s.get("groqModel") or "llama-3.3-70b-versatile",
         "openrouterModel": s.get("openrouterModel") or "meta-llama/llama-3.3-70b-instruct:free",
         "hasGeminiKey": bool((s.get("geminiApiKey") or "").strip()),
         "hasGroqKey": bool((s.get("groqApiKey") or "").strip()),
         "hasOpenrouterKey": bool((s.get("openrouterApiKey") or "").strip()),
+        "hasPostgresDsn": bool((s.get("postgresDsn") or "").strip()),
     }
 
 
@@ -126,7 +129,7 @@ def update_settings(req: SettingsUpdateRequest):
         if val is not None and val.strip():
             config.RUNTIME_SETTINGS[field] = val.strip()
 
-    for key_field in ("geminiApiKey", "groqApiKey", "openrouterApiKey"):
+    for key_field in ("geminiApiKey", "groqApiKey", "openrouterApiKey", "postgresDsn"):
         val = getattr(req, key_field)
         if val is not None and val.strip():
             config.RUNTIME_SETTINGS[key_field] = val.strip()
@@ -258,6 +261,7 @@ def chat(req: ChatRequest):
             document_id=req.documentId,
             history=req.history,
             allow_web_fallback=req.allowWebFallback,
+            force_web_search=req.forceWebSearch,
         )
     except Exception as e:
         raise HTTPException(502, providers.describe_error(e, "Answer generation"))

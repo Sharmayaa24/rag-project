@@ -5,6 +5,7 @@ pypdf
 pymupdf
 rapidocr-onnxruntime
 qdrant-client
+psycopg[binary]
 python-dotenv
 httpx
 google-genai

@@ -1,4 +1,6 @@
 from functools import lru_cache
+import json
+import re
 
 import httpx
 
@@ -108,13 +110,29 @@ def _chat_gemini(system: str, user: str) -> str:
     key = (config.RUNTIME_SETTINGS.get("geminiApiKey") or config.GEMINI_API_KEY).strip()
     if not key:
         raise ValueError("Gemini API key is missing. Add it in Settings or switch to FreeBuff / Ollama.")
-    model = config.RUNTIME_SETTINGS.get("geminiModel") or config.GEMINI_CHAT_MODEL
-    res = _gemini(key).models.generate_content(
-        model=model,
-        contents=user,
-        config=types.GenerateContentConfig(system_instruction=system),
-    )
-    return res.text or ""
+    primary = config.RUNTIME_SETTINGS.get("geminiModel") or config.GEMINI_CHAT_MODEL
+    candidates = [primary] + [
+        m
+        for m in ("gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.6-flash", "gemini-3.5-flash")
+        if m != primary
+    ]
+    client = _gemini(key)
+    last_exc = None
+    for model in candidates:
+        try:
+            res = client.models.generate_content(
+                model=model,
+                contents=user,
+                config=types.GenerateContentConfig(system_instruction=system),
+            )
+            return res.text or ""
+        except Exception as exc:
+            msg = str(exc)
+            last_exc = exc
+            if any(code in msg for code in ("503", "UNAVAILABLE", "404", "NOT_FOUND")):
+                continue
+            raise
+    raise last_exc
 
 
 def _chat_groq(system: str, user: str) -> str:
@@ -191,3 +209,23 @@ def chat(system: str, user: str) -> str:
     if provider == "openrouter":
         return _chat_openrouter(system, user)
     return _chat_ollama(system, user)
+
+
+def chat_json(system: str, user: str) -> dict:
+    """Call the active LLM expecting a JSON object response; returns {} on parse failure."""
+    raw = chat(f"{system}\nRespond with ONLY a valid JSON object and no extra text.", user).strip()
+    if not raw:
+        return {}
+    # Strip optional markdown code fences
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
+    candidate = fenced.group(1) if fenced else raw
+    if not candidate.startswith("{"):
+        brace = re.search(r"\{.*\}", candidate, re.DOTALL)
+        candidate = brace.group(0) if brace else ""
+    if not candidate:
+        return {}
+    try:
+        parsed = json.loads(candidate)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
